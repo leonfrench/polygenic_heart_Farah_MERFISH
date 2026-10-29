@@ -1,0 +1,14 @@
+.conda-env/
+__pycache__/
+.DS_Store
+*.part
+*.staging/
+.pytest_cache/
+.env
+.env.*
+.streamlit/secrets.toml
+
+# The Dryad download (raw input and its README) and the paper are not needed by the app.
+/data/overall_merfish.h5ad
+/data/README*.md
+/paper/

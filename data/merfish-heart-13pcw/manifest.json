@@ -1,0 +1,389 @@
+{
+  "format": "sparse-doubled-average-ranks-v1",
+  "layout": "per-slice-random-batches-v1",
+  "dataset": "Farah-heart-13pcw",
+  "created_utc": "2026-10-29T21:25:42.447064+00:00",
+  "n_cells": 228635,
+  "n_genes": 238,
+  "n_slices": 3,
+  "seed": 20261029,
+  "batch_cells": 16384,
+  "batch_entries": 12000000,
+  "observations": "MERFISH cells of three frontal sections of one 13 p.c.w. human heart, as annotated in overall_merfish.h5ad; counts are decoded transcripts per cell",
+  "coordinates": {
+    "columns": "rx, ry",
+    "units": "micrometres; each section centred on its bounding box, ry = -(y - centre)",
+    "um_per_unit": 1.0,
+    "raw": "x, y are obsm/spatial (micrometres, y up), where the source sets the sections side by side"
+  },
+  "counts": {
+    "method": "expm1(X) / sum(expm1(X)) * n_counts per cell, rounded; X is log1p(counts / n_counts * 365)",
+    "max_rounding_residual": 0.00016835596784403606
+  },
+  "region_assignment": "cellular community from the source: k-means (k = 13) of the population mix within 150 \u00b5m of each cell",
+  "sources": {
+    "expression": {
+      "path": "overall_merfish.h5ad",
+      "sha256": "3af2b996834d23f73e77ac197e8c4a9d604dbb67ffe024af9f5d2e6bd41ddecf"
+    },
+    "paper": "Farah et al., Nature 627, 854-864 (2024), doi:10.1038/s41586-024-07171-z",
+    "data": "https://doi.org/10.5061/dryad.w0vt4b8vp"
+  },
+  "ranks": {
+    "direction": "ascending: larger rank means higher expression",
+    "ties": "average",
+    "scale": 2,
+    "zeros": "all unstored genes have rank zero_rank2 / 2; stored ranks are absolute",
+    "universe": "every MERFISH panel gene, under its panel symbol",
+    "auroc": "(sum(rank of set) - k*(k+1)/2) / (k*(G-k))"
+  },
+  "annotation_levels": {
+    "cell_class": {
+      "kind": "cell_type",
+      "title": "Cell class",
+      "n_labels": 11
+    },
+    "cell_population": {
+      "kind": "cell_type",
+      "title": "Cell population",
+      "n_labels": 27
+    },
+    "leiden": {
+      "kind": "cell_type",
+      "title": "Leiden cluster",
+      "n_labels": 32
+    },
+    "community": {
+      "kind": "region",
+      "title": "Cellular community",
+      "n_labels": 13
+    }
+  },
+  "pseudobulk": {
+    "description": "per section and annotation level: summed panel-gene counts per (label, gene), <level>_counts rows follow <level>_index into labels[level]; <level>_cells counts cells",
+    "labels": {
+      "cell_class": [
+        "BEC",
+        "Endocardial",
+        "Epi",
+        "Fibro",
+        "LEC",
+        "Neuronal",
+        "SMC",
+        "WBC",
+        "aCM",
+        "ncCM",
+        "vCM"
+      ],
+      "cell_population": [
+        "BEC",
+        "EPDC",
+        "Epicardial",
+        "LEC",
+        "Neuronal",
+        "Pericyte",
+        "VEC",
+        "VIC",
+        "VSMC",
+        "WBC",
+        "aCM-LA",
+        "aCM-RA",
+        "aEndocardial",
+        "aFibro",
+        "adFibro",
+        "ncCM-AVC-like",
+        "ncCM-IFT-like",
+        "vCM-His-Purkinje",
+        "vCM-LV-AV",
+        "vCM-LV-Compact",
+        "vCM-LV-Trabecular",
+        "vCM-Proliferating",
+        "vCM-RV-AV",
+        "vCM-RV-Compact",
+        "vCM-RV-Trabecular",
+        "vEndocardial",
+        "vFibro"
+      ],
+      "leiden": [
+        "00",
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08",
+        "09",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20",
+        "22",
+        "23",
+        "24",
+        "25",
+        "26",
+        "28",
+        "29",
+        "30",
+        "31",
+        "32",
+        "33"
+      ],
+      "community": [
+        "AVN/AV Ring",
+        "IFT/SAN",
+        "Inner-LV",
+        "Inner-RV",
+        "Left Atria",
+        "Mus. Valve Leaf.",
+        "OFT",
+        "Outer-LV",
+        "Outer-RV",
+        "Right Atria",
+        "Subepicardial",
+        "VCS",
+        "Valve"
+      ]
+    },
+    "cells": {
+      "cell_class": "all",
+      "cell_population": "all",
+      "leiden": "all",
+      "community": "all"
+    }
+  },
+  "validation": {
+    "exact_rank_and_pairwise_auc_rows": 96,
+    "batches_roundtripped": true
+  },
+  "software": {
+    "python": "3.12.15",
+    "numpy": "2.5.4",
+    "pandas": "3.0.6",
+    "scipy": "1.18.1",
+    "h5py": "3.16.0"
+  },
+  "slices": [
+    {
+      "id": "R77_4C4",
+      "n_cells": 72962,
+      "cell_index_start": 0,
+      "cell_index_stop": 72962,
+      "bbox_rxry": [
+        -2519.803622603711,
+        -2678.4016782843883,
+        2519.803622603713,
+        2678.4016782843883
+      ],
+      "batches": [
+        "progressive/R77_4C4/00000.npz",
+        "progressive/R77_4C4/00001.npz",
+        "progressive/R77_4C4/00002.npz",
+        "progressive/R77_4C4/00003.npz",
+        "progressive/R77_4C4/00004.npz"
+      ],
+      "pseudobulk": "pseudobulk/R77_4C4.npz",
+      "rank_seconds": 3.02
+    },
+    {
+      "id": "R78_4C12",
+      "n_cells": 75782,
+      "cell_index_start": 72962,
+      "cell_index_stop": 148744,
+      "bbox_rxry": [
+        -2476.595888548271,
+        -2987.519612885765,
+        2476.595888548271,
+        2987.519612885765
+      ],
+      "batches": [
+        "progressive/R78_4C12/00000.npz",
+        "progressive/R78_4C12/00001.npz",
+        "progressive/R78_4C12/00002.npz",
+        "progressive/R78_4C12/00003.npz",
+        "progressive/R78_4C12/00004.npz"
+      ],
+      "pseudobulk": "pseudobulk/R78_4C12.npz",
+      "rank_seconds": 3.3
+    },
+    {
+      "id": "R78_4C15",
+      "n_cells": 79891,
+      "cell_index_start": 148744,
+      "cell_index_stop": 228635,
+      "bbox_rxry": [
+        -2617.455108504197,
+        -3129.906967651682,
+        2617.4551085041976,
+        3129.9069676516824
+      ],
+      "batches": [
+        "progressive/R78_4C15/00000.npz",
+        "progressive/R78_4C15/00001.npz",
+        "progressive/R78_4C15/00002.npz",
+        "progressive/R78_4C15/00003.npz",
+        "progressive/R78_4C15/00004.npz"
+      ],
+      "pseudobulk": "pseudobulk/R78_4C15.npz",
+      "rank_seconds": 3.76
+    }
+  ],
+  "files": [
+    {
+      "path": "progressive/R77_4C4/00000.npz",
+      "bytes": 1610284,
+      "sha256": "d8ced8ecdc0396ba757e89c4c1aeb3225771e478f2b6244367954544a7bdb767",
+      "slice": "R77_4C4",
+      "n_cells": 14593
+    },
+    {
+      "path": "progressive/R77_4C4/00001.npz",
+      "bytes": 1606264,
+      "sha256": "ea7ef530a96fdb374fd3523eb79e745daa8bb2d0d5af7a6afa58b1274d27286e",
+      "slice": "R77_4C4",
+      "n_cells": 14593
+    },
+    {
+      "path": "progressive/R77_4C4/00002.npz",
+      "bytes": 1603537,
+      "sha256": "97367078f8aadd61a5b6cd76b35fcafbc43cd0afc46b4cade23337e1b0fa3b83",
+      "slice": "R77_4C4",
+      "n_cells": 14593
+    },
+    {
+      "path": "progressive/R77_4C4/00003.npz",
+      "bytes": 1605039,
+      "sha256": "1cd142249214759c9cffe7036bdc284914200e349e579c0b44c245b7e0bfa547",
+      "slice": "R77_4C4",
+      "n_cells": 14593
+    },
+    {
+      "path": "progressive/R77_4C4/00004.npz",
+      "bytes": 1607332,
+      "sha256": "e3113eeeccfc8805d5461f4f195bc33f61eaf8e00f18c159cdf49931607d2eeb",
+      "slice": "R77_4C4",
+      "n_cells": 14590
+    },
+    {
+      "path": "pseudobulk/R77_4C4.npz",
+      "bytes": 47419,
+      "sha256": "632d12c1c8aadc6a0b9191b05a901a9f4a20443e29db143e20f3bce50f387887",
+      "slice": "R77_4C4",
+      "layout": "pseudobulk"
+    },
+    {
+      "path": "progressive/R78_4C12/00000.npz",
+      "bytes": 1795297,
+      "sha256": "fcd9073a19ccdbafb6ce4070bd2de56a88e530ed285b823e0afe7049546d8d14",
+      "slice": "R78_4C12",
+      "n_cells": 15157
+    },
+    {
+      "path": "progressive/R78_4C12/00001.npz",
+      "bytes": 1800196,
+      "sha256": "3a89e2f8178e291fb9a9307203a57cd393d93ee4d8f9bbce087500011eef65a3",
+      "slice": "R78_4C12",
+      "n_cells": 15157
+    },
+    {
+      "path": "progressive/R78_4C12/00002.npz",
+      "bytes": 1789233,
+      "sha256": "724f82ef2a2a7a02d6bf0de24519e38000cd2a12acae292fcbfd74b8363a153d",
+      "slice": "R78_4C12",
+      "n_cells": 15157
+    },
+    {
+      "path": "progressive/R78_4C12/00003.npz",
+      "bytes": 1793441,
+      "sha256": "e679ab796e879980436572b1d50c43daa2803fe8ac8768b7e283ce4bff477b25",
+      "slice": "R78_4C12",
+      "n_cells": 15157
+    },
+    {
+      "path": "progressive/R78_4C12/00004.npz",
+      "bytes": 1789175,
+      "sha256": "1002c844e3e6cf353c1cbbb358b74c2c5f8acc3f70408f8654c5eb360b5c0946",
+      "slice": "R78_4C12",
+      "n_cells": 15154
+    },
+    {
+      "path": "pseudobulk/R78_4C12.npz",
+      "bytes": 48501,
+      "sha256": "6dc6f9573cfc942987fb0bcba38247d6f4dcf1b3db074ee9d8c57069934990c4",
+      "slice": "R78_4C12",
+      "layout": "pseudobulk"
+    },
+    {
+      "path": "progressive/R78_4C15/00000.npz",
+      "bytes": 2101403,
+      "sha256": "6ade2f22bc3c0964b09ebcf2db1712810ca787038d154790bab5c6ab599703f6",
+      "slice": "R78_4C15",
+      "n_cells": 15979
+    },
+    {
+      "path": "progressive/R78_4C15/00001.npz",
+      "bytes": 2104647,
+      "sha256": "e7fd8a33eeb5853578cf9f4be8fbca05e484d1256642cbd18c31a3830e12db3e",
+      "slice": "R78_4C15",
+      "n_cells": 15979
+    },
+    {
+      "path": "progressive/R78_4C15/00002.npz",
+      "bytes": 2110923,
+      "sha256": "f3373120a606035b9094b43211bf4ae4db3747c9a41c83ea9537518b6e1cfb41",
+      "slice": "R78_4C15",
+      "n_cells": 15979
+    },
+    {
+      "path": "progressive/R78_4C15/00003.npz",
+      "bytes": 2111922,
+      "sha256": "b7b461803f6a858b4b9267c211755d6eb8e3f09f88cb11d4b8d62d6f25d974d0",
+      "slice": "R78_4C15",
+      "n_cells": 15979
+    },
+    {
+      "path": "progressive/R78_4C15/00004.npz",
+      "bytes": 2104533,
+      "sha256": "dcd7d36ad790b598462ea6d2b7c00e1953a27d44ea45f19c38b8996c33b2b8a8",
+      "slice": "R78_4C15",
+      "n_cells": 15975
+    },
+    {
+      "path": "pseudobulk/R78_4C15.npz",
+      "bytes": 47215,
+      "sha256": "36a0998c6a3eb5c63313fd14f230413dffba25b4fad92347218365bdefdcf82a",
+      "slice": "R78_4C15",
+      "layout": "pseudobulk"
+    },
+    {
+      "path": "annotations.json",
+      "bytes": 6559,
+      "sha256": "06686dc17d1c93401c140e291860c0c8a7fc208b8ace0a5b8ad65bf36ec28fc7"
+    },
+    {
+      "path": "cells.parquet",
+      "bytes": 15836014,
+      "sha256": "3cbc3747fd3c8f45507bb62cee4f00b5eb01fe3181ec698aeaf36d19bcf02687"
+    },
+    {
+      "path": "genes.parquet",
+      "bytes": 8881,
+      "sha256": "ddf45aad8ae383bfaec32abb58e1aab15138791d3a56f6b12c88131a48b56bd9"
+    },
+    {
+      "path": "gene_detection.parquet",
+      "bytes": 7681,
+      "sha256": "e7eff133ee93dc52da2a8ea4cc853a1bb6b6caf78aa3297d58b61792aee64b2e"
+    }
+  ],
+  "seconds": 12.3
+}
