@@ -123,3 +123,26 @@ def test_delayed_ack_sends_only_new_scores_and_remount_recovers(monkeypatch):
     assert sent[-1]['hover'] == hover
     chart.cell_chart(cells, np.array([.1, .2, .3, np.nan]), **args, absolute=True)
     assert sent[-1]['absolute'] is True
+
+
+def test_acknowledged_scores_are_not_sent_again(monkeypatch):
+    import spatial_app.chart as chart
+    session = {}
+    sent = []
+    monkeypatch.setattr(chart.st, 'session_state', session)
+    monkeypatch.setattr(chart, '_component', lambda **kwargs: sent.append(kwargs))
+    cells = toy_cells(('T1',), per=4)
+    args = dict(slices=['T1'], annotations=ANNOTATIONS, version='slices-1', mode='Gene-set AUROC', cell_level='cell_subclass',
+                region_level='region', cell_aurocs={}, region_aurocs={}, filename='test')
+    scores = np.array([.1, .2, .3, .4])  # every cell scored in one run
+    session['cell_plot'] = dict(client='browser', version=None, seq=-1)
+    chart.cell_chart(cells, scores, **args)
+    seq = sent[-1]['packet']['seq']
+    assert decode(sent[-1]['packet']['indices'], '<u4').tolist() == [0, 1, 2, 3]
+    chart.cell_chart(cells, scores, **args)  # not acknowledged yet: resent whole
+    assert sent[-1]['packet']['seq'] == seq and decode(sent[-1]['packet']['indices'], '<u4').size == 4
+    session['cell_plot'] = dict(client='browser', version='slices-1', seq=seq)
+    chart.cell_chart(cells, scores, **{**args, 'mode': 'Cell type'})  # a rerun after delivery, e.g. a new colour mode
+    assert sent[-1]['packet']['seq'] == seq and decode(sent[-1]['packet']['indices'], '<u4').size == 0
+    chart.cell_chart(cells, scores[::-1].copy(), **args)  # new scores are sent as a patch from the delivered ones
+    assert sent[-1]['packet']['seq'] == seq + 1 and decode(sent[-1]['packet']['indices'], '<u4').tolist() == [0, 1, 2, 3]

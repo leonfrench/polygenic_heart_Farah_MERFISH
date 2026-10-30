@@ -16,29 +16,18 @@ def manifest():
     return json.loads((DATA/'manifest.json').read_text())
 
 
-def finish(app, manifest):
-    """Advance the fragment timer until every batch of every section is scored."""
-    batches = {b for s in manifest['slices'] for b in s['batches']}
-    for _ in range(len(batches)+5):  # one batch per rerun
-        if batches <= app.session_state['done']:
-            return
-        app.run()
-        assert not app.exception
-    raise AssertionError('scoring did not finish')
-
-
-def test_three_sections_score_and_fill_both_tables(manifest):
+def test_three_sections_score_in_one_run_and_fill_both_tables(manifest):
     app = AppTest.from_file(str(ROOT/'app.py'), default_timeout=180).run()
     assert not app.exception
     assert manifest['n_slices'] == 3 and len(app.session_state['scores']) == manifest['n_cells']
+    # The first run scores every cell of every batch, with no progress bar or later reruns.
+    assert np.isfinite(app.session_state['scores']).all() and not app.get('progress')
+    assert app.session_state['done'] == {b for s in manifest['slices'] for b in s['batches']}
     header = next(m.value for m in app.markdown if 'frontal sections' in m.value)
     assert header == '**Farah-heart-13pcw · 3 frontal sections of one 13 p.c.w. heart**'
     panels = app.session_state['cell_plot_transport']['geometry']['panels']
     assert [p['label'] for p in panels] == ['R77_4C4', 'R78_4C12', 'R78_4C15']
     assert app.session_state['job']['query'].universe_size == manifest['n_genes'] == 238
-    app.run()
-    finish(app, manifest)
-    assert np.isfinite(app.session_state['scores']).all()
     cell_table, community_table = app.dataframe[0].value, app.dataframe[1].value
     cells = pd.read_parquet(DATA/'cells.parquet')
     for table, column in [(cell_table, 'cell_population'), (community_table, 'community')]:
@@ -60,9 +49,13 @@ def test_three_sections_score_and_fill_both_tables(manifest):
 def test_mouse_input_maps_to_human_and_colour_modes_run(manifest):
     app = AppTest.from_file(str(ROOT/'app.py'), default_timeout=180).run()
     app.selectbox(key='input_species').set_value('Mouse').run()
+    before = app.session_state['scores'].copy()
     app.text_area(key='target_input').set_value('Myh6 Nr2f2 Pln NOT_A_GENE').run()
     assert not app.exception
     assert app.session_state['job']['query'].target_symbols == ('MYH6', 'NR2F2')
+    # A new gene set is rescored, and its tables filled, in the same run.
+    scores = app.session_state['scores']
+    assert np.isfinite(scores).all() and not np.array_equal(scores, before) and len(app.dataframe) == 2
     assert app.session_state['mapping_unmapped'] == (['NOT_A_GENE', 'Pln'], [])  # Pln has no human entry in the HomoloGene snapshot
     app.selectbox(key='cell_level').set_value('cell_class').run()
     assert app.dataframe[0].value.iloc[0, 0] == 'aCM'  # atrial markers

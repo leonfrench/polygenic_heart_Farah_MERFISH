@@ -1,6 +1,5 @@
 """Polygenic gene-set tester for the Farah et al. MERFISH developing human heart (13 p.c.w.). Run with: streamlit run app.py"""
 from functools import partial
-from itertools import zip_longest
 from pathlib import Path
 import json
 import os
@@ -95,9 +94,9 @@ def specificity_profiles(path, version, slices, level):
                 excluded=int(((cells > 0) & ~keep).sum()))
 
 
-# Retain only the current batch so progressive scoring does not accumulate
-# every decoded batch in server memory.
-@st.cache_resource(max_entries=1, show_spinner=False)
+# Every decoded batch stays cached for all sessions: the 15 batches total 82 MB, and
+# keeping them makes each new gene set one quick scoring run.
+@st.cache_resource(max_entries=64, show_spinner=False)
 def cached_shard(path, checksum):
     shard = load_shard(path)
     for value in shard.values():
@@ -155,7 +154,6 @@ with st.sidebar:
         reset_scores()
         st.session_state.colour_mode = MODES[0]  # a new query starts on its gene-set AUROC
         st.session_state.pop('pick', None)  # new tables start with no ticked row
-        st.session_state.tables_stale = True  # clear the previous query's tables at once
         st.session_state.mapping_unmapped = ([], [])
         try:
             targets, unmapped_targets = map_to_human(target_text, species)
@@ -199,8 +197,33 @@ st.markdown('<div style="color:#000;font-size:24px;font-weight:400;line-height:1
             'Polygenic enrichment tool for the MERFISH developing human heart atlas by Farah et al.</div>', unsafe_allow_html=True)
 st.markdown(f"**{manifest['dataset']} · {len(selected)} frontal section{'s' if len(selected) > 1 else ''} of one 13 p.c.w. heart**")
 view, view_index = display_cells(str(DATA), data_version, tuple(selected))
-plan = [b for group in zip_longest(*(slice_info[s]['batches'] for s in selected)) for b in group if b]
+plan = [b for s in selected for b in slice_info[s]['batches']]
 chart_version = f"{version}:{'|'.join(selected)}"
+
+
+def score_cells(job):
+    """Every cell's gene-set AUROC in one run: the dataset is small enough to score all batches at once."""
+    q = job['query']
+    try:
+        for path in plan:
+            started = time.perf_counter()
+            shard = cached_shard(str(DATA/path), checksums[path])
+            job['load_seconds'] += time.perf_counter()-started
+            started = time.perf_counter()
+            batch_scores = auroc_vectorized(shard, q.target, len(genes), q.background)
+            if not np.isfinite(batch_scores).all():
+                raise ValueError('Scoring produced undefined values')
+            st.session_state.scores[shard['cell_index']] = batch_scores
+            job['compute_seconds'] += time.perf_counter()-started
+            st.session_state.done.add(path)
+    except (OSError, ValueError, KeyError) as exc:
+        job['error'] = str(exc)
+    print(f"[timing] sections={len(selected)} batches={len(plan)} load_s={job['load_seconds']:.3f} "
+          f"scoring_s={job['compute_seconds']:.3f}", flush=True)
+
+
+if st.session_state.job and not st.session_state.job['error'] and len(st.session_state.done) < len(plan):
+    score_cells(st.session_state.job)
 
 
 def enrichment_tables(query):
@@ -233,32 +256,8 @@ def enrichment_tables(query):
     return cache[key]
 
 
-def render_progress():
-    timing_context = f"sections={len(selected)} mode={mode!r}"
+def render_summary():
     job = st.session_state.job
-    pending = [b for b in plan if b not in st.session_state.done]
-    if job and not job['error'] and pending:
-        path = pending[0]
-        try:
-            started = time.perf_counter()
-            shard = cached_shard(str(DATA/path), checksums[path])
-            load_seconds = time.perf_counter()-started
-            job['load_seconds'] += load_seconds
-            started = time.perf_counter()
-            q = job['query']
-            batch_scores = auroc_vectorized(shard, q.target, len(genes), q.background)
-            if not np.isfinite(batch_scores).all():
-                raise ValueError('Scoring produced undefined values')
-            st.session_state.scores[shard['cell_index']] = batch_scores
-            compute_seconds = time.perf_counter()-started
-            job['compute_seconds'] += compute_seconds
-            st.session_state.done.add(path)
-            print(f"[timing] {timing_context} batch={path} load_s={load_seconds:.3f} scoring_s={compute_seconds:.3f}", flush=True)
-            if len(pending) == 1:
-                st.rerun()  # Stop the fragment timer and render the completed result.
-        except (OSError, ValueError, KeyError) as exc:
-            job['error'] = str(exc)
-            st.rerun()
     scores = st.session_state.scores[view_index]
     count = int(np.isfinite(scores).sum())
     limits = score_limits(scores)
@@ -286,9 +285,6 @@ def render_progress():
                        'Panel symbols are used as given.')
             st.download_button('Download genes used', lambda used=used: used.to_csv(index=False).encode(),
                                file_name=f"{manifest['dataset']}-genes-used.csv", mime='text/csv', key='download_genes')
-        done = sum(b in st.session_state.done for b in plan)
-        label = 'Complete' if count == len(view) else ('Stopped' if job['error'] else 'Scoring')
-        st.progress(count/len(view), text=f"{label} · {done} of {len(plan)} batches · vectorized scoring {job['compute_seconds']:.2f}s")
     else:
         st.info('All cells are shown. Enter a valid target gene set to calculate AUROC automatically, or colour by cell type or cellular community.')
 
@@ -305,7 +301,7 @@ def render_chart(cell_table, region_table):
                    um_per_unit=manifest['coordinates']['um_per_unit'], noun='sections', hover=HOVER)
         st.caption('Each dot is one segmented cell at its centre. Each section is centred in its panel and every panel uses the same scale, '
                    "oriented as in the paper: atria at the top, the heart's right side on the left. "
-                   f'Grey cells are not scored yet. Gene-set AUROC colours are relative within each section ({low} to {high} percentile, range shown above each panel), '
+                   f'Cells are grey until a valid gene set is scored. Gene-set AUROC colours are relative within each section ({low} to {high} percentile, range shown above each panel), '
                    f'because AUROC ranges differ between sections; label AUROC modes share one scale clipped at the {low} and {high} percentiles. '
                    'Hover for annotations and the exact AUROC, drag to pan, scroll to zoom, double-click to reset.')
     detected = detection[selected].sum(axis=1).to_numpy()
@@ -322,17 +318,12 @@ def render_chart(cell_table, region_table):
 
 
 def render_tables():
-    """Specificity tables; returned so the chart can colour by label AUROC.
-
-    The first update after a new query shows a placeholder instead of the previous
-    query's tables; the next update (a quarter-second later while scoring) fills them.
-    """
+    """Specificity tables; returned so the chart can colour by label AUROC."""
     job = st.session_state.job
     scores = st.session_state.scores[view_index]
     complete = bool(job) and np.isfinite(scores).all()
-    stale = st.session_state.pop('tables_stale', False)
     # Specificity uses pseudobulk profiles, not cell scores, so the tables need only a valid query.
-    cell_table, region_table = enrichment_tables(job['query']) if job and not stale else (None, None)
+    cell_table, region_table = enrichment_tables(job['query']) if job else (None, None)
     number = dict(AUROC=st.column_config.NumberColumn(format='%.4f', help='Probability that a target gene ranks above a non-target gene in this pseudobulk, by specificity z-score, with half credit for ties.'),
                   **{'p-value': st.column_config.NumberColumn(help='Two-sided Mann–Whitney U test over genes, with tie and continuity correction.'),
                      'pFDR': st.column_config.NumberColumn(help='Benjamini–Hochberg adjusted p-value (false discovery rate) across all labels at this level.')})
@@ -344,8 +335,7 @@ def render_tables():
             title = annotations[level]['title']
             st.subheader(f'Cell type specificity · {title.lower()}' if kind == 'Cell type' else f'{title} specificity')
             if table is None:
-                st.info('Calculating expression specificity for the new gene set…' if job else
-                        'Enter a valid target gene set to test expression specificity.')
+                st.info('Enter a valid target gene set to test expression specificity.')
                 continue
             if table.attrs.get('excluded'):
                 st.caption(f"{table.attrs['excluded']} labels with fewer than {MIN_CELLS} cells are not profiled.")
@@ -379,9 +369,6 @@ def render_tables():
     return cell_table, region_table
 
 
-pending_batches = st.session_state.job and not st.session_state.job['error'] and any(b not in st.session_state.done for b in plan)
-
-
 def pick_row(kind, key, labels):
     """Row tick: colour by that table's specificity AUROC and highlight the label.
 
@@ -408,18 +395,16 @@ def pick_row(kind, key, labels):
     st.session_state.full_rerun = True  # the colour control lives outside the fragment
 
 
-@st.fragment(run_every=0.25 if pending_batches else None)
+@st.fragment  # a table row tick reruns only this part (or the whole app, for the colour control)
 def render_explorer():
     if st.session_state.pop('full_rerun', False):
         st.rerun(scope='app')
-    # One timer prevents competing fragments from starving chart updates. Containers fix the
-    # layout order; the tables are filled first, so a new query's tables replace the old ones
-    # before the slower scoring and plot updates.
-    progress_box, chart_box, tables_box = st.container(), st.container(), st.container()
+    # Containers fix the layout order; the tables are filled first because the chart colours by their AUROCs.
+    summary_box, chart_box, tables_box = st.container(), st.container(), st.container()
     with tables_box:
         tables = render_tables()
-    with progress_box:
-        render_progress()
+    with summary_box:
+        render_summary()
     with chart_box:
         render_chart(*tables)
 

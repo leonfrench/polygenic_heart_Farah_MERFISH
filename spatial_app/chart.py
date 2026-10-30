@@ -92,6 +92,8 @@ def cell_chart(cells, scores, *, slices, annotations, version, mode, cell_level,
     acknowledged = state['history'].get(ack.get('seq')) if ack.get('version') == version else None
     if acknowledged is not None:
         state['baseline'] = acknowledged
+        if pending is not None and pending['seq'] == ack.get('seq'):
+            pending['packet'] = score_patch(acknowledged, pending['scores'])  # delivered: later reruns resend nothing
     # Keep one pending snapshot; resend it until acknowledged. A missed update
     # is recovered by an absolute patch from the last acknowledged baseline.
     if pending is None or not np.array_equal(pending['scores'], scores, equal_nan=True):

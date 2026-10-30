@@ -26,9 +26,11 @@ Open http://localhost:8501. `requirements.txt` is enough to run the app on the p
   preprocessing tests are skipped there). `requirements.txt` is the dependency file Community Cloud installs; do not add
   an `environment.yml`, which it would install instead.
 - The prepared data (42 MB in 22 files; the largest is 16 MB) is committed in plain git, so no Git LFS is needed.
-- Memory: a local server held about 0.1 GB at rest and peaked at 0.4 GB while a browser session scored every cell,
-  switched through the colour modes and cell type levels, and scored a second gene set.
-- The first page load sends about 3 MB of plot data to the browser.
+- Memory: a local server started at about 0.1 GB and peaked at 0.6 GB while a browser session scored the default gene
+  set, a second one and one with a custom background, and switched through the colour modes and cell type levels. It
+  held 0.3 GB afterwards, including the 82 MB of cached batches.
+- The first page load sends about 6 MB of plot data to the browser: the geometry and every cell's score together. A new
+  gene set sends about 3.5 MB of scores; other reruns (colour modes, levels, table rows) send no scores.
 
 ## Using the app
 
@@ -42,6 +44,9 @@ Open http://localhost:8501. `requirements.txt` is enough to run the app on the p
   set is the His–Purkinje (ventricular conduction system) cardiomyocyte markers named in the paper
   (`IRX1 IRX2 IRX3 TBX3 HCN4`); it ranks `vCM-His-Purkinje` and the `VCS` community first, and that community is in all
   three sections.
+- **Scoring**: every cell is scored in one run when the gene set changes, so there is no progress bar. The first run on
+  a server takes about 0.5 s, most of it decoding the 15 batches; they stay cached for all sessions (82 MB decoded), so
+  later gene sets take 0.1–0.2 s, or about 1.5 s with a custom background, which re-ranks every cell.
 - **Colour cells by**: gene-set AUROC, cell type, cellular community, cell type AUROC or cellular community AUROC (the
   last two colour each cell by its label's specificity AUROC from the tables). The cell type level (class / population /
   Leiden cluster) sets both the colours and the cell type table; communities have one level.
@@ -56,7 +61,7 @@ Open http://localhost:8501. `requirements.txt` is enough to run the app on the p
   with the section; the class is added when that level is chosen in the sidebar. Abbreviations are spelled out from the
   paper's text (`VEC`, valve endocardial cell; `VCS`, ventricular conduction system).
 - **Tables**: cell type and community expression specificity across all sections (AUROC, p-value and the
-  Benjamini–Hochberg adjusted pFDR), with CSV downloads, plus a download of every cell's score once scoring completes.
+  Benjamini–Hochberg adjusted pFDR), with CSV downloads, plus a download of every cell's score.
   The tables use pseudobulk profiles, not cell scores, so they appear as soon as the gene set is valid. Tick a row's
   checkbox to colour the plot by that table's specificity AUROC (cell type or community) and highlight the label; untick
   it to return to the previous colour mode. The population table shows the cell class as its second column; the Leiden
